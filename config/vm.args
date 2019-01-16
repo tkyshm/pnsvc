@@ -1,0 +1,6 @@
+-sname pnsvc
+
+-setcookie pnsvc_cookie
+
++K true
++A30

@@ -1,0 +1,18 @@
+{"1.1.0",
+[{<<"base64url">>,{pkg,<<"base64url">>,<<"0.0.1">>},1},
+ {<<"cowboy">>,{pkg,<<"cowboy">>,<<"2.6.0">>},0},
+ {<<"cowlib">>,{pkg,<<"cowlib">>,<<"2.6.0">>},1},
+ {<<"gun">>,{pkg,<<"gun">>,<<"1.3.0">>},0},
+ {<<"jose">>,{pkg,<<"jose">>,<<"1.9.0">>},0},
+ {<<"jsone">>,{pkg,<<"jsone">>,<<"1.4.7">>},0},
+ {<<"ranch">>,{pkg,<<"ranch">>,<<"1.7.1">>},1}]}.
+[
+{pkg_hash,[
+ {<<"base64url">>, <<"36A90125F5948E3AFD7BE97662A1504B934DD5DAC78451CA6E9ABF85A10286BE">>},
+ {<<"cowboy">>, <<"DC1FF5354C89E36A3E3EF8D10433396DCFF0DCBB1D4223B58C64C2D51A6D88D9">>},
+ {<<"cowlib">>, <<"8AA629F81A0FC189F261DC98A42243FA842625FEEA3C7EC56C48F4CCDB55490F">>},
+ {<<"gun">>, <<"18E5D269649C987AF95AEC309F68A27FFC3930531DD227A6EAA0884D6684286E">>},
+ {<<"jose">>, <<"4167C5F6D06FFAEBFFD15CDB8DA61A108445EF5E85AB8F5A7AD926FDF3ADA154">>},
+ {<<"jsone">>, <<"A970C23D9700AE7842B526C57677E6E3F10894B429524696EAD547E9302391C0">>},
+ {<<"ranch">>, <<"6B1FAB51B49196860B733A49C07604465A47BDB78AA10C1C16A3D199F7F8C881">>}]}
+].
