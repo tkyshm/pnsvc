@@ -11,7 +11,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, fetch/0, force_all_refrech/0, refrech_client/1]).
+-export([start_link/1, fetch/0, force_all_refresh/0, refresh_client/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -49,13 +49,13 @@ start_link(Size) ->
 fetch() ->
     gen_server:call(?SERVER, fetch).
 
--spec force_all_refrech() -> ok | {error, term()}.
-force_all_refrech() ->
+-spec force_all_refresh() -> ok | {error, term()}.
+force_all_refresh() ->
     gen_server:call(?SERVER, init_connect).
 
--spec refrech_client(id()) -> {ok, pnsvc_fcm_client:client()} | {error, term()}.
-refrech_client(Id) ->
-    gen_server:call(?SERVER, {refrech_client, Id}).
+-spec refresh_client(id()) -> {ok, pnsvc_fcm_client:client()} | {error, term()}.
+refresh_client(Id) ->
+    gen_server:call(?SERVER, {refresh_client, Id}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -101,7 +101,7 @@ handle_continue(init_connect, #state{pool_size = Size} = State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({refrech_client, Id}, _From, #state{clients = OldClients} = State) ->
+handle_call({refresh_client, Id}, _From, #state{clients = OldClients} = State) ->
     Client = proplists:get_value(Id, OldClients),
     NewClients = proplists:delete(Id, OldClients),
     pnsvc_fcm_client:close(Client),

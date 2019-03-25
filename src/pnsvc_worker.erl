@@ -89,26 +89,36 @@ handle_continue(try_fetch, State) ->
 handle_call({send, _Req, _ProjectID}, _From, #state{client = undefined} = State) ->
     {reply, {error, err_not_fetched_client}, State, {continue, try_fetch}};
 handle_call({send, Req, ProjectID}, _From, #state{client = C, id = Id} = State) ->
+    IsExpired = pnsvc_fcm_client:is_expired(C),
+
+    NewState =
+        case IsExpired of
+            true -> 
+                State#state{client = do_refresh_client(Id)};
+            _ ->
+                State
+        end,
+
     try pnsvc_fcm_client:post(C, Req, ProjectID) of
         Reply ->
             logger:debug("reply: ~p", [Reply]),
-            {reply, Reply, State}
+            {reply, Reply, NewState}
     catch
         _:{error_post, ErrPostReason, _}:_ ->
             % reply pnsvc server error
             Reply = {error, ErrPostReason},
-            case pnsvc_client_pool:refrech_client(Id) of
+            case pnsvc_client_pool:refresh_client(Id) of
                 {ok, NewC} -> 
-                    {reply, Reply, State#state{client = NewC}, {continue, try_fetch}};
+                    {reply, Reply, NewState#state{client = NewC}, {continue, try_fetch}};
 
                 {error, Reason} ->
-                    logger:warning("refrech_client error: reason=~p", [Reason]),
-                    {reply, Reply, State#state{client = undefined}, {continue, try_fetch}}
+                    logger:warning("refresh_client error: reason=~p", [Reason]),
+                    {reply, Reply, NewState#state{client = undefined}, {continue, try_fetch}}
             end;
 
         _:Reason:Stack ->
             logger:warning("error: reason=~p stack=~p", [Reason, Stack]),
-            {reply, Reason, State}
+            {reply, Reason, NewState}
     end;
 handle_call(_Request, _From, State) ->
     Reply = ok,
@@ -165,3 +175,14 @@ terminate(_Reason, #state{client = C}) ->
 %%--------------------------------------------------------------------
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
+
+%% private
+do_refresh_client(Id) ->
+    case pnsvc_client_pool:refresh_client(Id) of
+        {ok, NewC} -> 
+            NewC;
+
+        {error, Reason} ->
+            logger:warning("refresh_client error: reason=~p", [Reason]),
+            undefined
+    end.

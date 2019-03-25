@@ -4,7 +4,8 @@
     new/0,
     new/1,
     close/1,
-    post/3
+    post/3,
+    is_expired/1
 ]).
 
 -record(client, {
@@ -55,9 +56,11 @@ new(Port) ->
 post(#client{conn = Conn, token = Token}, Req, ProjectID) ->
     try 
         {ok, Body} = pnsvc_fcm_request:encode(Req),
+
         StreamRef = gun:post(Conn, ?FCM_ENDPOINT(ProjectID), [
             {<<"authorization">>, <<"Bearer ", Token/binary>>}
         ], Body),
+
         wait_body(Conn, StreamRef)
     catch
         _:Reason:Stack ->
@@ -66,6 +69,11 @@ post(#client{conn = Conn, token = Token}, Req, ProjectID) ->
 
 -spec close(client()) -> ok.
 close(#client{conn = Conn}) -> gun:close(Conn).
+
+-spec is_expired(client()) -> boolean().
+is_expired(#client{expire = Expire}) ->
+    Now = os:system_time(second),
+    Expire < Now.
 
 %% private
 -define(TRY_COUNT, 3).
