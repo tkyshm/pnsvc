@@ -70,8 +70,9 @@ post(#client{conn = Conn, token = Token}, Req, ProjectID) ->
 
         wait_body(Conn, StreamRef)
     catch
-        _:Reason:Stack ->
-            throw({err_post, Reason, Stack})
+        _:{Reason, Status}:Stack ->
+            logger:warning("post error: reason=~p status=~p stack=~p", [Reason, Status, Stack]),
+            throw({err_post, Reason})
     end.
 
 -spec close(client()) -> ok.
