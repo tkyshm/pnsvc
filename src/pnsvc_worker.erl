@@ -104,8 +104,9 @@ handle_call({send, Req, ProjectID}, _From, #state{client = C, id = Id} = State) 
             logger:debug("reply: ~p", [Reply]),
             {reply, Reply, NewState}
     catch
-        _:{error_post, ErrPostReason, _}:_ ->
+        _:{err_post, ErrPostReason, Status}:Stack ->
             % reply pnsvc server error
+            logger:warning("error: reason=~p status=~p stack=~p", [ErrPostReason, Status, Stack]),
             Reply = {error, ErrPostReason},
             case pnsvc_client_pool:refresh_client(Id) of
                 {ok, NewC} -> 

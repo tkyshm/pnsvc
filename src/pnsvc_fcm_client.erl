@@ -31,13 +31,20 @@
 
 -define(DEFAULT_EXPIRE, 3600).
 -define(HTTPC_OPTS, [{body_format, binary}]).
+-define(KEEPALIVE, 5000).
+-define(CONNECT_TIMEOUT, 60000).
 
 -spec new() -> client().
 new() -> new(?FCM_PORT).
 
 -spec new(inet:port_number()) -> client().
 new(Port) ->
-    case gun:open(?FCM_HOST, Port) of
+    Opts = #{
+      connect_timeout => ?CONNECT_TIMEOUT,
+      http2_opts => #{ keepalive => ?KEEPALIVE},
+      http_opts => #{ keepalive => ?KEEPALIVE}
+     },
+    case gun:open(?FCM_HOST, Port, Opts) of
         {ok, Conn} ->
             {ok, Protocol} = gun:await_up(Conn),
             logger:debug("protocol: ~p", [Protocol]),
@@ -93,7 +100,10 @@ wait_body(Conn, StreamRef, N) ->
 
         {error, timeout} ->
             logger:info("error: timeout, retry wait_body(try=~p)", [N]),
-            wait_body(Conn, StreamRef, N+1)
+            wait_body(Conn, StreamRef, N+1);
+
+        {error, Reason} ->
+            throw({Reason, 500})
     end.
 
 fetch_token(#client{expire = OldExpire} = C) ->
