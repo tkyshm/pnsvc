@@ -25,7 +25,8 @@
 -export([
          %% TODO: test case names go here
          t_send/1,
-         t_http_send/1
+         t_http_send/1,
+         t_oauth_error/1
         ]).
 
 -include_lib("common_test/include/ct.hrl").
@@ -48,7 +49,8 @@ groups() ->
         %% TODO: group definitions here e.g.
         {test, [], [
             t_send,
-            t_http_send
+            t_http_send,
+            t_oauth_error
         ]}
     ].
 
@@ -84,6 +86,14 @@ end_per_group(_Groupname, _Config) ->
 %%%===================================================================
 %%% Testcase specific setup/teardown
 %%%===================================================================
+init_per_testcase(t_oauth_error, Config) ->
+    Account = persistent_term:get(pnsvc_service_account),
+    NewAccount = maps:put(<<"token_uri">>, <<"http://localhost:28080/invalid_oauth">>, Account),
+    persistent_term:put(pnsvc_service_account, NewAccount),
+    {ok, Size} = application:get_env(pnsvc, pool_size),
+    [pnsvc_client_pool:refresh_client(Id) || Id <- lists:seq(1, Size)],
+ 
+    [{service_account, Account}|Config];
 init_per_testcase(_TestCase, Config) ->
     Config.
 
@@ -208,6 +218,30 @@ t_http_send(_Config) ->
         end,
 
         ?assertEqual(Status, Got)
+    end,
+
+    [TestFun(T) || T <- TestTable].
+
+t_oauth_error(_Config) ->
+    TestTable = 
+    [
+     #{
+       name => "invalid access token",
+       status => 401, 
+       request => #{message => #{token => <<"ok token">>}},
+       resp_status => <<"UNAUTHENTICATED">>
+      }
+    ],
+
+    TestFun =
+    fun(#{name := _TestName, status := WantStatus, resp_status := WantRespStatus, request := Req}) ->
+        {ok, GotStatus, GotRawResp} = pnsvc:send(Req, "project-some-id"),
+
+        GotResp = maps:get(<<"error">>, jsone:decode(GotRawResp)),
+        GotRespStatus = maps:get(<<"status">>, GotResp),
+
+        ?assertEqual(WantStatus, GotStatus),
+        ?assertEqual(WantRespStatus, GotRespStatus)
     end,
 
     [TestFun(T) || T <- TestTable].

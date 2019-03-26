@@ -5,7 +5,9 @@
 start_link() -> 
     Dispatch = cowboy_router:compile([
         {'_', [{"/v1/projects/:project_id/messages/send", fcm_mock, []},
-               {"/oauth", fcm_mock_oauth, []}]}
+               {"/oauth", fcm_mock_oauth, []},
+               {"/invalid_oauth", fcm_mock_invalid_oauth, []}
+              ]}
     ]),
 
     Port = 28080,
@@ -19,11 +21,26 @@ init(Req0, State) ->
     timer:sleep(80 + rand:uniform(50)),
     {ok, Req, State}.
 
-handle_request(<<"POST">>, Req0) ->
-	{ok, PostVals, Req} = cowboy_req:read_body(Req0),
+validate_access_token(Token) -> 
+    case Token of
+        <<"test_invalid_access_token">> -> throw({error, 401, invalid_access_token});
+                                    _ -> ok
+    end.
 
-    Data = jsone:decode(PostVals),
-    handle_data(Data, Req);
+handle_request(<<"POST">>, Req0) ->
+    try
+        {bearer, Token} = cowboy_req:parse_header(<<"authorization">>, Req0),
+        validate_access_token(Token),
+        {ok, PostVals, Req} = cowboy_req:read_body(Req0),
+        Data = jsone:decode(PostVals),
+        {Data, Req}
+    of
+        {D, R} ->
+            handle_data(D, R)
+    catch
+        _:{error, Status, Reason}:_Stack ->
+            reply(Status, Reason, Req0)
+    end;
 handle_request(_Method, Req0) ->
     cowboy_req:reply(405, Req0).
 
@@ -52,6 +69,15 @@ handle_data(Data, Req0) ->
 validate_token(<<"invalid_token">>) -> invalid_token;
 validate_token(_) -> ok.
 
+reply(401, invalid_access_token, Req) ->
+    ErrMsg =
+    #{<<"error">> =>
+      #{<<"code">> => 401,
+        <<"message">> =>
+        <<"Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.">>,
+        <<"status">> => <<"UNAUTHENTICATED">>}},
+    Resp = jsone:encode(ErrMsg),
+    cowboy_req:reply(401, #{}, Resp, Req);
 reply(400, no_message, Req) ->
     ErrMsg =
     #{<<"error">> =>
