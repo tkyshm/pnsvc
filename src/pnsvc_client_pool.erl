@@ -11,7 +11,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1, fetch/0, force_all_refresh/0, refresh_client/1]).
+-export([start_link/1, fetch/0, fetch/1, force_all_refresh/0, refresh_client/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -49,6 +49,10 @@ start_link(Size) ->
 fetch() ->
     gen_server:call(?SERVER, fetch).
 
+-spec fetch(id()) -> {id(), pid() | undefined} | {error, term()}.
+fetch(Id) ->
+    gen_server:call(?SERVER, {fetch, Id}).
+
 -spec force_all_refresh() -> ok | {error, term()}.
 force_all_refresh() ->
     gen_server:call(?SERVER, init_connect).
@@ -85,7 +89,10 @@ handle_continue(init_connect, #state{pool_size = Size} = State) ->
             logger:warning("error: reason=~p stack=~p", [Reason, Stack]),
             timer:sleep(1000),
             {noreply, State, {continue, init_connect}}
-    end.
+    end;
+handle_continue({close, Client}, State) ->
+    pnsvc_fcm_client:close(Client),
+    {noreply, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -104,11 +111,11 @@ handle_continue(init_connect, #state{pool_size = Size} = State) ->
 handle_call({refresh_client, Id}, _From, #state{clients = OldClients} = State) ->
     Client = proplists:get_value(Id, OldClients),
     NewClients = proplists:delete(Id, OldClients),
-    pnsvc_fcm_client:close(Client),
 
     try try_connect() of
         NewClient ->
-            {reply, {ok, NewClient}, State#state{clients = [{Id, NewClient} | NewClients]}}
+            NewState = State#state{clients = [{Id, NewClient} | NewClients]},
+            {reply, {ok, NewClient}, NewState, {continue, {close, Client}}}
     catch
         _:Reason:Stack ->
             logger:warning("error: reason=~p stack=~p", [Reason, Stack]),
@@ -131,6 +138,9 @@ handle_call(fetch, _From, #state{clients = []} = State) ->
 handle_call(fetch, _From, #state{clients = [H|Clients]} = State) ->
     NewClients = lists:reverse([H|lists:reverse(Clients)]),
     {reply, H, State#state{clients = NewClients}};
+handle_call({fetch, Id}, _From, #state{clients = Clients} = State) ->
+    Client = proplists:get_value(Id, Clients),
+    {reply, {Id, Client}, State};
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.

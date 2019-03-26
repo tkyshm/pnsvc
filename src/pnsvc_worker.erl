@@ -99,10 +99,14 @@ handle_call({send, Req, ProjectID}, _From, #state{client = C, id = Id} = State) 
                 State
         end,
 
-    try pnsvc_fcm_client:post(C, Req, ProjectID) of
+    % If the client in pnsvc_client_pool was closed, but this worker's state remain old connection.
+    % So, it needs to fetch the refreshed client by id before post.
+    {Id, SyncC} = pnsvc_client_pool:fetch(Id),
+
+    try pnsvc_fcm_client:post(SyncC, Req, ProjectID) of
         Reply ->
             logger:debug("reply: ~p", [Reply]),
-            {reply, Reply, NewState}
+            {reply, Reply, NewState#state{client = SyncC}}
     catch
         _:{err_post, ErrPostReason}:Stack ->
             % reply pnsvc server error

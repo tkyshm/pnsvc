@@ -14,7 +14,7 @@
     expire = 0 :: non_neg_integer()
 }).
 
--opaque client() :: #client{}.
+-opaque client() :: #client{} | undefined.
 
 -export_type([client/0]).
 
@@ -60,6 +60,8 @@ new(Port) ->
     end.
 
 -spec post(client(), pnsvc_fcm_request:request(), iolist()) -> {ok, term(), term()}.
+post(undefined, _Req, _ProjectID) ->
+    throw({err_post, client_was_undefined});
 post(#client{conn = Conn, token = Token}, Req, ProjectID) ->
     try 
         {ok, Body} = pnsvc_fcm_request:encode(Req),
