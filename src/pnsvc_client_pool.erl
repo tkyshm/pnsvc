@@ -45,11 +45,11 @@
 start_link(Size) ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [Size], []).
 
--spec fetch() -> {id(), pid()} | {error, term()}.
+-spec fetch() -> {id(), pnsvc_fcm_client:client()} | {error, term()}.
 fetch() ->
     gen_server:call(?SERVER, fetch).
 
--spec fetch(id()) -> {id(), pid() | undefined} | {error, term()}.
+-spec fetch(id()) -> {id(), pnsvc_fcm_client:client()} | {error, term()}.
 fetch(Id) ->
     gen_server:call(?SERVER, {fetch, Id}).
 
