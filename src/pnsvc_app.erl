@@ -10,6 +10,7 @@
 -export([start/2, stop/1]).
 
 -define(DEFAULT_WORKER_NUM, 5).
+-define(DEFAULT_EXPIRE, 3600).
 
 -ifdef(TEST).
 -define(DEFAULT_SERVICE_ACCOUNT, [code:lib_dir(pnsvc, priv), "/test_service_account.json"]).
@@ -24,6 +25,7 @@
 start(_StartType, _StartArgs) ->
     set_service_account(),
     set_worker_num(),
+    set_access_token_expires(),
 
     Ret = pnsvc_sup:start_link(),
 
@@ -54,3 +56,7 @@ set_service_account() ->
 set_worker_num() ->
     WorkerNum = application:get_env(pnsvc, worker_num, ?DEFAULT_WORKER_NUM),
     persistent_term:put(pnsvc_worker_num, WorkerNum).
+
+set_access_token_expires() ->
+    Expire = application:get_env(pnsvc, access_token_expires, ?DEFAULT_EXPIRE),
+    persistent_term:put(pnsvc_access_token_expires, Expire).

@@ -41,16 +41,20 @@ new() -> new(?FCM_PORT).
 new(Port) ->
     Opts = #{
       connect_timeout => ?CONNECT_TIMEOUT,
-      http2_opts => #{ keepalive => ?KEEPALIVE},
-      http_opts => #{ keepalive => ?KEEPALIVE}
+      http2_opts => #{ keepalive => ?KEEPALIVE },
+      http_opts => #{ keepalive => ?KEEPALIVE }
      },
     case gun:open(?FCM_HOST, Port, Opts) of
         {ok, Conn} ->
-            {ok, Protocol} = gun:await_up(Conn),
-            logger:debug("protocol: ~p", [Protocol]),
-            case fetch_token(#client{conn = Conn}) of
-                {ok, C} ->
-                    C;
+            case gun:await_up(Conn) of
+                {ok, Protocol} -> 
+                    logger:debug("protocol: ~p", [Protocol]),
+                    case fetch_token(#client{conn = Conn}) of
+                        {ok, C} ->
+                            C;
+                        {error, Reason} ->
+                            throw({err_new_fcm_client, Reason})
+                    end;
                 {error, Reason} ->
                     throw({err_new_fcm_client, Reason})
             end;
@@ -158,7 +162,7 @@ generate_token(Now) ->
     Account = persistent_term:get(pnsvc_service_account),
 
     ClientEmail = maps:get(<<"client_email">>, Account),
-    Expire = Now + ?DEFAULT_EXPIRE,
+    Expire = Now + persistent_term:get(pnsvc_access_token_expires),
     Claims = 
     #{
       <<"iat">>    => Now,
