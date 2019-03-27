@@ -16,6 +16,8 @@
 
 -opaque client() :: #client{} | undefined.
 
+-type status() :: integer().
+
 -export_type([client/0]).
 
 -ifdef(TEST).
@@ -63,7 +65,7 @@ new(Port) ->
             throw({err_new_fcm_client, Reason})
     end.
 
--spec post(client(), pnsvc_fcm_request:request(), iolist()) -> {ok, term(), term()}.
+-spec post(client(), pnsvc_fcm_request:request(), iolist()) -> {ok, status(), term()}.
 post(undefined, _Req, _ProjectID) ->
     throw({err_post, client_was_undefined});
 post(#client{conn = Conn, token = Token}, Req, ProjectID) ->

@@ -12,7 +12,20 @@ send(Req, ProjectID) when is_binary(ProjectID)->
     send(Req, binary_to_list(ProjectID));
 send(Req, ProjectID) ->
     Pid = get_worker(),
-    gen_server:call(Pid, {send, Req, ProjectID}).
+    Ret = gen_server:call(Pid, {send, Req, ProjectID}),
+
+    case Ret of
+        {ok, Status, _Body} ->
+            if Status >= 300 ->
+                   pnsvc_stats:incr_err_count();
+               true -> 
+                   pnsvc_stats:incr_send_count()
+            end;
+        {error, _Reason} ->
+            pnsvc_stats:incr_err_count()
+    end,
+
+    Ret.
 
 % private
 get_worker() ->
