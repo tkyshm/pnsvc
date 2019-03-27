@@ -65,4 +65,13 @@ init([]) ->
       modules => ['pnsvc_worker_sup']
      },
 
-    {ok, {SupFlags, [GunSup, PoolSup, WorkerSup]}}.
+    Stats = #{
+      id => 'pnsvc_stats',   
+      start => {'pnsvc_stats', start_link, []},      
+      restart => permanent,   
+      shutdown => 2000, 
+      type => worker, 
+      modules => ['pnsvc_stats']
+     },
+
+    {ok, {SupFlags, [GunSup, PoolSup, WorkerSup, Stats]}}.
