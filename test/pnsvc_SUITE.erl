@@ -115,26 +115,39 @@ t_send(_Config) ->
        name => "success",
        status => 200, 
        request => #{message => #{token => <<"ok token">>}},
-       err_type => <<>>
+       err_type => <<>>,
+       send_count => 1,
+       err_count => 0
       },
      #{
        name => "message is invalid",
        status => 400,
        request => #{message => #{}},
-       err_type => <<"type.googleapis.com/google.rpc.BadRequest">>
+       err_type => <<"type.googleapis.com/google.rpc.BadRequest">>,
+       send_count => 1,
+       err_count => 1
       },
      #{
        name => "token is invalid",
        status => 400,
        request => #{message => #{token => <<"invalid_token">>}},
-       err_type => <<"type.googleapis.com/google.rpc.BadRequest">>
+       err_type => <<"type.googleapis.com/google.rpc.BadRequest">>,
+       send_count => 1,
+       err_count => 2
       }
     ],
 
     TestFun =
-    fun(#{name := _TestName, status := WantStatus, err_type := WantErrType, request := Req}) ->
+    fun(#{name := _TestName,
+          status := WantStatus,
+          err_type := WantErrType,
+          request := Req,
+          err_count := WantErrCnt,
+          send_count := WantSendCount}) ->
         {ok, GotStatus, GotRawResp} = pnsvc:send(Req, "project-some-id"),
         GotResp = jsone:decode(GotRawResp),
+
+        ?assertEqual(#{err_count => WantErrCnt, send_count => WantSendCount}, pnsvc_stats:stats()),
 
         ?assertEqual(WantStatus, GotStatus),
         if 
