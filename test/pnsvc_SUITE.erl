@@ -97,6 +97,10 @@ init_per_testcase(t_oauth_error, Config) ->
 init_per_testcase(_TestCase, Config) ->
     Config.
 
+end_per_testcase(t_oauth_error, Config) ->
+    Account = proplists:get_value(service_account, Config),
+    persistent_term:put(pnsvc_service_account, Account),
+    ok;
 end_per_testcase(_TestCase, _Config) ->
     ok.
 
